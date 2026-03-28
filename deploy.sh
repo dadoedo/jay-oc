@@ -53,10 +53,10 @@ rsync $RSYNC_FLAGS \
 
 if $RESTART && ! $DRY_RUN; then
   echo ""
-  echo "--- Restarting gateway ---"
-  ssh "$SERVER" "cd $REMOTE_OPENCLAW && docker compose restart openclaw-gateway"
-  echo "Gateway restarted."
-  sleep 2
+  echo "--- Recreating gateway (to pick up env/config changes) ---"
+  ssh "$SERVER" "cd $REMOTE_OPENCLAW && docker compose up -d openclaw-gateway"
+  echo "Waiting for gateway to start..."
+  sleep 5
   ssh "$SERVER" "curl -fsS http://127.0.0.1:18789/healthz && echo ' OK' || echo ' FAILED'"
 fi
 
