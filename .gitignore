@@ -1,0 +1,16 @@
+# Credentials
+infinee/info.txt
+.env
+
+# IDE / editor
+.cursor/
+.idea/
+*.swp
+*.swo
+
+# Node
+node_modules/
+
+# OS
+.DS_Store
+Thumbs.db

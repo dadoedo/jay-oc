@@ -1,0 +1,24 @@
+services:
+  openclaw-gateway:
+    build:
+      context: .
+      args:
+        OPENCLAW_DOCKER_APT_PACKAGES: "postgresql-client"
+    environment:
+      GOG_KEYRING_PASSWORD: ${GOG_KEYRING_PASSWORD:-}
+      VIRALSKY_DB_URL: ${VIRALSKY_DB_URL:-}
+      SKYSNAIL_DB_URL: ${SKYSNAIL_DB_URL:-}
+      ANDERRO_DB_URL: ${ANDERRO_DB_URL:-}
+      FOODIENT_DB_URL: ${FOODIENT_DB_URL:-}
+      AITRENDZ_WP_APP_PASS: ${AITRENDZ_WP_APP_PASS:-}
+    command:
+      [
+        "node",
+        "dist/index.js",
+        "gateway",
+        "--bind",
+        "${OPENCLAW_GATEWAY_BIND:-lan}",
+        "--port",
+        "18789",
+        "--allow-unconfigured",
+      ]
