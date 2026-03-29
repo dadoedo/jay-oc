@@ -4,13 +4,17 @@ services:
       context: .
       args:
         OPENCLAW_DOCKER_APT_PACKAGES: "postgresql-client"
+    # Secrets like RESEND_API_KEY: use env_file so compose interpolation cannot override them with empty ${VAR:-}.
+    env_file:
+      - .env
     environment:
-      GOG_KEYRING_PASSWORD: ${GOG_KEYRING_PASSWORD:-}
+      GOG_KEYRING_PASSWORD: ${GOG_KEYRING_PASSWORD:-} 
       VIRALSKY_DB_URL: ${VIRALSKY_DB_URL:-}
       SKYSNAIL_DB_URL: ${SKYSNAIL_DB_URL:-}
       ANDERRO_DB_URL: ${ANDERRO_DB_URL:-}
       FOODIENT_DB_URL: ${FOODIENT_DB_URL:-}
       AITRENDZ_WP_APP_PASS: ${AITRENDZ_WP_APP_PASS:-}
+      RESEND_API_KEY : ${RESEND_API_KEY:-}
     command:
       [
         "node",

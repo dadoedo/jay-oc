@@ -1,60 +1,60 @@
-# TOOLS.md - Jay Environment & Tools
+# TOOLS.md - Resend Email
 
-## Runtime Environment
+## Jay Identity
+**Email:** `jay@anderro.com` — default sending address for ALL projects (not just Anderro)
+**Alternatívy:** `support@`, `hello@`, `assistant@` — všetko @anderro.com
 
-Jay runs inside a Docker container on the Infinee Hetzner production server.
+## Odosielanie emailov
+**Status:** ✅ Funkčné
+**Doména:** anderro.com (sending enabled, receiving disabled)
+**SDK:** Resend Node.js v6.9.2
 
-- **Host server:** 46.224.84.45 (Ubuntu 24.04)
-- **Container paths map to host paths:**
-  - `/home/node/.openclaw/` → `/opt/openclaw-jay/data/.openclaw/` (on host)
-  - `/home/node/.openclaw/workspace/` → `/opt/openclaw-jay/data/.openclaw/workspace/` (on host)
-- **Installed tools:** git, psql (postgresql-client), curl, node
-- **Gateway URL:** https://jay.infinee.pro (behind nginx reverse proxy)
+### Použitie
+```javascript
+import { Resend } from 'resend';
+const resend = new Resend(process.env.RESEND_API_KEY);
 
-## Database Access
-
-Jay has readonly access to Infinee databases via psql.
-Connection strings are available as environment variables — use them directly:
-
-```bash
-psql "$VIRALSKY_DB_URL" -c "SELECT count(*) FROM users;"
-psql "$SKYSNAIL_DB_URL" -c "\\dt"
-psql "$ANDERRO_DB_URL" -c "SELECT version();"
-psql "$FOODIENT_DB_URL" -c "\\dt"
+await resend.emails.send({
+  from: 'jay@anderro.com',  // alebo onboarding@resend.dev pre testy
+  to: ['recipient@example.com'],
+  subject: 'Subject',
+  text: 'Body',
+  html: '<p>HTML body</p>'
+});
 ```
 
-**READONLY only.** Never attempt INSERT/UPDATE/DELETE on production databases.
+## Prijímanie emailov
+**Status:** ❌ Nie je nastavené
+**Problém:** Doména anderro.com má receiving disabled
 
-See individual project skills in `skills/` for table schemas and common queries.
+### Čo treba urobiť:
+1. **Možnosť A:** Použiť Resend-managed domain (rýchlejšie)
+   - Adresa: `jay@<id>.resend.app`
+   - Nastaviť v Resend dashboarde → Emails → Receiving
+   
+2. **Možnosť B:** Kúpiť novú doménu pre receiving
+   - Napr. `askjay.io`, `jaybot.com`, atď.
+   - Nastaviť MX záznamy
 
-## Git / GitHub Access
-
-GitHub PAT (readonly) stored at /home/node/.openclaw/credentials/github-token.txt
-Org: dadoedo (GitHub username)
-Clone repos into the workspace for code review and debugging.
-
-```bash
-GH_TOKEN=$(cat /home/node/.openclaw/credentials/github-token.txt)
-git clone https://$GH_TOKEN@github.com/dadoedo/<repo>.git
+### Architektúra prijímania:
+```
+Odosielateľ → Email → Resend (MX) → Webhook → https://jay.infinee.pro/webhook/resend → Jay
 ```
 
-## Coexisting Services (DO NOT TOUCH)
+### Security levels (podľa agent-email-inbox skill):
+- **Strict allowlist** — len trusted odosielatelia
+- **Domain allowlist** — napr. len @gmail.com, @infinee.pro
+- **Content filtering** — spam detection, attachment scanning
+- **Sandboxed processing** — izolované spracovanie
 
-These run on the same server as Jay. Do not interact with their containers or ports:
-- SkySnail/Thumbgen: ports 3000, 3001, 8001
-- BMA: port 3002
-- Postgres (Thumbgen): port 5432
-- Postgres (BMA): port 5434
-- Redis: port 6379
+## Webhooks
+**Status:** ❌ Žiadne webhooky nie sú nastavené
+**Potrebné:** RESEND_WEBHOOK_SECRET na overenie webhookov
 
-## WordPress Access
+## Kontakty a Audiences
+- **Audience:** General (id: 909f2cfa-9dd3-4122-891f-58ec090f0f6f)
+- **Kontakty:** 0 (prázdne)
 
-For AITrendz, use the WP REST API with application password:
-
-```bash
-curl -u "admin:$AITRENDZ_WP_APP_PASS" https://aitrendz.xyz/wp-json/wp/v2/posts?per_page=5
-```
-
-## Skills
-
-Project-specific knowledge lives in skills/ directory. Read the relevant SKILL.md when working on a project.
+## API kľúč
+**Env:** RESEND_API_KEY ✅ nastavený
+**Funkčnosť:** ✅ Testované — odosielanie, list domén, contacts
