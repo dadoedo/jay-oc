@@ -19,7 +19,7 @@ for arg in "$@"; do
     --help|-h)
       echo "Usage: $0 [--restart] [--dry-run]"
       echo ""
-      echo "Syncs workspace files (skills, .md) and docker-compose.override.yml to production."
+      echo "Syncs workspace, docker-compose.override.yml, and applies reasoning visibility patch on server."
       echo ""
       echo "  --restart   Restart the gateway after deploy"
       echo "  --dry-run   Show what would be synced without doing it"
@@ -50,6 +50,15 @@ echo "--- Syncing docker-compose.override.yml ---"
 rsync $RSYNC_FLAGS \
   "$LOCAL_DIR/docker-compose.override.yml" \
   "$SERVER:$REMOTE_OPENCLAW/docker-compose.override.yml"
+
+if ! $DRY_RUN; then
+  echo ""
+  echo "--- Patching openclaw.json (agents.list[].reasoningDefault: off) ---"
+  rsync $RSYNC_FLAGS \
+    "$LOCAL_DIR/scripts/patch-openclaw-reasoning-visibility-off.sh" \
+    "$SERVER:$REMOTE_OPENCLAW/scripts/patch-openclaw-reasoning-visibility-off.sh"
+  ssh "$SERVER" "bash $REMOTE_OPENCLAW/scripts/patch-openclaw-reasoning-visibility-off.sh"
+fi
 
 if $RESTART && ! $DRY_RUN; then
   echo ""

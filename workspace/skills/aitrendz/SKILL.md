@@ -59,15 +59,15 @@ Use Application Password from `$AITRENDZ_WP_APP_PASS`:
 
 ```bash
 # List recent posts
-curl -s -u "admin:$AITRENDZ_WP_APP_PASS" \
+curl -s -u "Zapierik:$AITRENDZ_WP_APP_PASS" \
   "https://aitrendz.xyz/wp-json/wp/v2/posts?per_page=5" | python3 -m json.tool
 
 # Get specific post by ID
-curl -s -u "admin:$AITRENDZ_WP_APP_PASS" \
+curl -s -u "Zapierik:$AITRENDZ_WP_APP_PASS" \
   "https://aitrendz.xyz/wp-json/wp/v2/posts/49500" | python3 -m json.tool
 
 # List pages
-curl -s -u "admin:$AITRENDZ_WP_APP_PASS" \
+curl -s -u "Zapierik:$AITRENDZ_WP_APP_PASS" \
   "https://aitrendz.xyz/wp-json/wp/v2/pages?per_page=10" | python3 -m json.tool
 
 # List categories
@@ -77,11 +77,11 @@ curl -s "https://aitrendz.xyz/wp-json/wp/v2/categories?per_page=50" | python3 -m
 curl -s "https://aitrendz.xyz/wp-json/wp/v2/tags?per_page=50" | python3 -m json.tool
 
 # List users
-curl -s -u "admin:$AITRENDZ_WP_APP_PASS" \
+curl -s -u "Zapierik:$AITRENDZ_WP_APP_PASS" \
   "https://aitrendz.xyz/wp-json/wp/v2/users" | python3 -m json.tool
 
 # List media
-curl -s -u "admin:$AITRENDZ_WP_APP_PASS" \
+curl -s -u "Zapierik:$AITRENDZ_WP_APP_PASS" \
   "https://aitrendz.xyz/wp-json/wp/v2/media?per_page=10" | python3 -m json.tool
 ```
 
@@ -89,7 +89,7 @@ curl -s -u "admin:$AITRENDZ_WP_APP_PASS" \
 
 ```bash
 # Create a new post (draft)
-curl -s -X POST -u "admin:$AITRENDZ_WP_APP_PASS" \
+curl -s -X POST -u "Zapierik:$AITRENDZ_WP_APP_PASS" \
   "https://aitrendz.xyz/wp-json/wp/v2/posts" \
   -H "Content-Type: application/json" \
   -d '{
@@ -101,13 +101,13 @@ curl -s -X POST -u "admin:$AITRENDZ_WP_APP_PASS" \
   }' | python3 -m json.tool
 
 # Publish a draft (change status)
-curl -s -X PUT -u "admin:$AITRENDZ_WP_APP_PASS" \
+curl -s -X PUT -u "Zapierik:$AITRENDZ_WP_APP_PASS" \
   "https://aitrendz.xyz/wp-json/wp/v2/posts/POST_ID" \
   -H "Content-Type: application/json" \
   -d '{"status": "publish"}' | python3 -m json.tool
 
 # Update post content
-curl -s -X PUT -u "admin:$AITRENDZ_WP_APP_PASS" \
+curl -s -X PUT -u "Zapierik:$AITRENDZ_WP_APP_PASS" \
   "https://aitrendz.xyz/wp-json/wp/v2/posts/POST_ID" \
   -H "Content-Type: application/json" \
   -d '{
@@ -120,14 +120,14 @@ curl -s -X PUT -u "admin:$AITRENDZ_WP_APP_PASS" \
 
 ```bash
 # Upload image
-curl -s -X POST -u "admin:$AITRENDZ_WP_APP_PASS" \
+curl -s -X POST -u "Zapierik:$AITRENDZ_WP_APP_PASS" \
   "https://aitrendz.xyz/wp-json/wp/v2/media" \
   -H "Content-Disposition: attachment; filename=image.png" \
   -H "Content-Type: image/png" \
   --data-binary @/path/to/image.png | python3 -m json.tool
 
 # Set featured image on post
-curl -s -X PUT -u "admin:$AITRENDZ_WP_APP_PASS" \
+curl -s -X PUT -u "Zapierik:$AITRENDZ_WP_APP_PASS" \
   "https://aitrendz.xyz/wp-json/wp/v2/posts/POST_ID" \
   -H "Content-Type: application/json" \
   -d '{"featured_media": MEDIA_ID}' | python3 -m json.tool
@@ -161,7 +161,7 @@ curl -s -u "$WC_KEY:$WC_SECRET" \
 
 1. **Create draft post:**
    ```bash
-   curl -s -X POST -u "admin:$AITRENDZ_WP_APP_PASS" \
+   curl -s -X POST -u "Zapierik:$AITRENDZ_WP_APP_PASS" \
      "https://aitrendz.xyz/wp-json/wp/v2/posts" \
      -H "Content-Type: application/json" \
      -d '{
@@ -176,7 +176,7 @@ curl -s -u "$WC_KEY:$WC_SECRET" \
 
 3. **Publish when ready:**
    ```bash
-   curl -s -X PUT -u "admin:$AITRENDZ_WP_APP_PASS" \
+   curl -s -X PUT -u "Zapierik:$AITRENDZ_WP_APP_PASS" \
      "https://aitrendz.xyz/wp-json/wp/v2/posts/POST_ID" \
      -H "Content-Type: application/json" \
      -d '{"status": "publish"}'
@@ -217,40 +217,62 @@ curl -s "https://aitrendz.xyz/wp-json" | python3 -c "import json,sys; d=json.loa
 
 ## AI Tool Directory
 
-The AI tool directory uses a custom post type with URL pattern `/link-detail/{tool-slug}/`. Each tool page includes:
+AI tools are stored as **WooCommerce products** (`post_type=product`) and accessed via the WooCommerce REST API. Each tool is assigned to categories like "AI Agents Tools", "AI Video Tools", etc.
 
+### WooCommerce API Access
+
+Use Application Password from `$AITRENDZ_WP_APP_PASS` with username `Zapierik`:
+
+```bash
+# List all AI tools (products)
+curl -s -u "Zapierik:$AITRENDZ_WP_APP_PASS" \
+  "https://aitrendz.xyz/wp-json/wc/v3/products?per_page=20" | python3 -m json.tool
+
+# Get AI tools by category (e.g., AI Agents Tools = ID 393)
+curl -s -u "Zapierik:$AITRENDZ_WP_APP_PASS" \
+  "https://aitrendz.xyz/wp-json/wc/v3/products?category=393&per_page=20" | python3 -m json.tool
+
+# Get newest AI tools (sorted by date)
+curl -s -u "Zapierik:$AITRENDZ_WP_APP_PASS" \
+  "https://aitrendz.xyz/wp-json/wc/v3/products?category=393&orderby=date&order=desc&per_page=10" | python3 -m json.tool
+
+# Get specific product by ID
+curl -s -u "Zapierik:$AITRENDZ_WP_APP_PASS" \
+  "https://aitrendz.xyz/wp-json/wc/v3/products/49525" | python3 -m json.tool
+```
+
+### AI Tool Category IDs
+
+| Category | ID | Description |
+|----------|-----|-------------|
+| AI Agents Tools | 393 | Autonomous AI agents |
+| AI Audio Tools | 394 | Audio generation/editing |
+| AI Business Tools | 395 | Business automation |
+| AI Chatbots | 396 | Conversational AI |
+| AI Content | 397 | Content creation |
+| AI Marketing Tools | 398 | Marketing automation |
+| AI Video Tools | 399 | Video generation/editing |
+| AI Writing Tools | 400 | Writing assistants |
+| AI Tools For Developers | 401 | Developer tools |
+| AI Mobile Apps | 402 | Mobile AI applications |
+
+### List All Categories
+
+```bash
+curl -s -u "Zapierik:$AITRENDZ_WP_APP_PASS" \
+  "https://aitrendz.xyz/wp-json/wc/v3/products/categories?per_page=50" | python3 -m json.tool
+```
+
+### Tool Page Structure
+
+Each tool page (`/link-detail/{tool-slug}/`) includes:
 - Tool name and description
 - Visit Website link
-- Category tags (AI SEO Tools, AI Video Tools, etc.)
+- Category tags
 - Social sharing buttons
 - Related/Alternative tools carousel
 - User reviews section
-
-### Tool Categories (from homepage)
-
-- AI Agents Tools
-- AI Audio Tools
-- AI Browser Extensions
-- AI Business Tools
-- AI Chatbots
-- AI Content
-- AI Detection Tools
-- AI Education Tools
-- AI Finance Tools
-- AI HR
-- AI Marketing Tools
-- AI Mobile Apps
-- AI models
-- AI Productivity Tools
-- AI Tool Aggregators
-- AI Tools For Developers
-- AI Video Tools
-- AI Visual Art Tools
-- AI Writing Tools
-- ChatGPT Tools
-- Lifestyle AI Tools
-- Multifunctional AI Tools
-- Open Source AI Tools
+- JSON-LD metadata with `datePublished` and `dateModified`
 
 ## Social Media
 
