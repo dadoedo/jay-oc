@@ -1,0 +1,10 @@
+{
+  "name": "stripe-analytics",
+  "version": "1.0.3",
+  "description": "Complete Stripe analytics dashboard for SaaS founders (READ-ONLY)",
+  "main": "skill/skill.js",
+  "type": "module",
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

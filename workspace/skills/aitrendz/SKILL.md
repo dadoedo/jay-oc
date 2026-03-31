@@ -285,6 +285,85 @@ Each tool page (`/link-detail/{tool-slug}/`) includes:
 - **Discord:** /invite/HuyWbX9um8
 - **Threads:** @aitrendz
 
+## Adding New AI Tools
+
+### Workflow for Creating New Tool Entries
+
+**Important Rules:**
+- Use only **1 category** per tool (most specific one)
+- Never use em dashes (—) in descriptions
+- Add paragraph spacing after every 2-3 sentences
+- Always include a screenshot of the tool website
+
+1. **Check if tool already exists:**
+   ```bash
+   curl -s -u "Zapierik:$AITRENDZ_WP_APP_PASS" \
+     "https://aitrendz.xyz/wp-json/wc/v3/products?search=ToolName&per_page=10"
+   ```
+
+2. **Create the product:**
+   ```bash
+   curl -s -X POST -u "Zapierik:$AITRENDZ_WP_APP_PASS" \
+     "https://aitrendz.xyz/wp-json/wc/v3/products" \
+     -H "Content-Type: application/json" \
+     -d '{
+       "name": "ToolName",
+       "slug": "toolname",
+       "type": "external",
+       "status": "publish",
+       "catalog_visibility": "visible",
+       "description": "<p>Full description with features, use cases, and benefits. Add spacing every 2-3 sentences.</p>",
+       "short_description": "<p>One-line summary for listings. No em dashes.</p>",
+       "external_url": "https://toolwebsite.com/",
+       "categories": [{"id": CATEGORY_ID}],
+       "tags": [{"name": "Tag1"}, {"name": "Tag2"}]
+     }'
+   ```
+
+3. **Upload image:**
+   ```bash
+   # Create placeholder if no logo available
+   convert -size 800x600 xc:'#HEXCOLOR' /tmp/toolname.png
+   
+   # Upload to WordPress
+   curl -s -X POST -u "Zapierik:$AITRENDZ_WP_APP_PASS" \
+     "https://aitrendz.xyz/wp-json/wp/v2/media" \
+     -F "file=@/tmp/toolname.png;filename=toolname.png" \
+     -F "title=ToolName" \
+     -F "alt_text=ToolName AI Tool"
+   ```
+
+4. **Attach image to product:**
+   ```bash
+   curl -s -X PUT -u "Zapierik:$AITRENDZ_WP_APP_PASS" \
+     "https://aitrendz.xyz/wp-json/wc/v3/products/PRODUCT_ID" \
+     -H "Content-Type: application/json" \
+     -d '{"images": [{"id": MEDIA_ID}]}'
+   ```
+
+### SEO/AEO Guidelines for Tool Descriptions
+
+- **Description:** 150-300 words, include key features, use cases, pricing info
+- **Short description:** 1-2 sentences for listings
+- **Categories:** Only 1 category (most specific one)
+- **Tags:** 3-5 relevant keywords
+- **External URL:** Direct link to tool website
+- **Image:** Screenshot of tool website (not placeholder)
+
+### Formatting Rules
+
+- **NO em dashes** (—) anywhere in content
+- **Paragraph spacing** after every 2-3 sentences for readability
+- **Only 1 category** per tool
+- **Always include screenshot** of actual tool website
+
+### Example: Base44 (Created 2026-03-30)
+
+**Categories:** AI Coding Tools (98), AI Tools For Developers (459)  
+**Tags:** No-Code, App Builder, AI Development, Full-Stack, MVP  
+**URL:** https://aitrendz.xyz/link-detail/base44/  
+**Product ID:** 49557
+
 ## Related Projects
 
 AITrendz promotes these related projects:

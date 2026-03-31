@@ -3,6 +3,7 @@
 ## David (primary operator)
 - Co-founder at Infinee (technical cofounder)
 - Manages all Infinee products and infrastructure
+- Email: d.stredansky@gmail.com
 - Timezone: Europe/Bratislava (CET/CEST)
 - Communicates in Slovak, sometimes English
 
