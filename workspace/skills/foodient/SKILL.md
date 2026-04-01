@@ -15,6 +15,8 @@ AI-powered mobile application that helps users identify allergens and food sensi
 - **App Store:** [TODO]
 - **Play Store:** [TODO]
 
+**GitHub API (OpenClaws):** `GITHUB_PAT_TOKEN` in the workspace `.env` has access to `dadoedo/food-detection-api` and `dadoedo/food-detection-app` (Foodient BE + React Native). Use for GitHub API, PRs, or automation from this environment.
+
 ---
 
 ## Tech Stack Overview

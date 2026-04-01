@@ -13,6 +13,8 @@ AI-powered SaaS tool for generating CTR-optimized YouTube thumbnails using Gemin
 - **API:** https://api.skysnail.io
 - **GitHub:** https://github.com/dadoedo/thumbgen
 
+**GitHub API (OpenClaws):** `GITHUB_PAT_TOKEN` in the workspace `.env` has access to `dadoedo/thumbgen` (SkySnail). Use for GitHub API, PRs, or automation from this environment.
+
 ## Tech Stack
 
 | Layer | Technology |

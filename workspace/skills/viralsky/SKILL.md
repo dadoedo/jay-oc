@@ -13,6 +13,8 @@ AI-powered social media content generation platform. Users generate viral thread
 - **GitHub:** https://github.com/dadoedo/amber (repo name "amber", npm name "viralsky")
 - **Local path:** `/home/david/PhpstormProjects/private/amber`
 
+**GitHub API (OpenClaws):** `GITHUB_PAT_TOKEN` in the workspace `.env` has access to `dadoedo/amber` (ViralSky). Use for GitHub API, PRs, or automation from this environment.
+
 ## Tech Stack
 
 | Area | Tech |

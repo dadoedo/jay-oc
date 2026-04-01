@@ -13,6 +13,8 @@ SaaS affiliate and partner management platform. Businesses list their SaaS produ
 - **Tracking:** https://track.anderro.com
 - **GitHub:** https://github.com/dadoedo/anderro
 
+**GitHub API (OpenClaws):** `GITHUB_PAT_TOKEN` in the workspace `.env` has access to `dadoedo/anderro` (Anderro). Use for GitHub API, PRs, or automation from this environment.
+
 ## Tech Stack
 
 | Area | Tech |
