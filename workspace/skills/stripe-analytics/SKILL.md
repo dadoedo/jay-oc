@@ -31,11 +31,31 @@ description: |
 **Input Schema** (JSON):
 ```json
 {
+  "action": "analytics",     // analytics|customer|subscription|invoices|events|raw
   "project": "skysnail",     // skysnail|anderro|viralsky|foodient (required if multiple keys exist)
+  
+  // For analytics (default):
   "days_back": 90,           // 7-365 days
   "segment_by": "geo",       // plan|geo|industry  
   "forecast_months": 6,      // 1-12 months
-  "customer_limit": 15       // 1-50
+  "customer_limit": 15,      // 1-50
+  
+  // For customer lookup:
+  "customer_id": "cus_xxx",  // OR
+  "email": "user@example.com",
+  
+  // For subscription lookup:
+  "subscription_id": "sub_xxx",
+  
+  // For invoices/events:
+  "limit": 20,               // max 100
+  "status": "paid",          // optional filter
+  
+  // For raw API call:
+  "endpoint": "customers/cus_xxx",
+  "method": "GET",
+  "params": { "limit": "10" },
+  "body": { ... }
 }
 ```
 
@@ -123,6 +143,30 @@ User: "Stripe metrics + forecast"
 ```
 "Revenue by country"
 → US: 66% | EU: 22% | "Localize pricing?"
+```
+
+### 4. Debug Specific Customer
+```json
+{"action": "customer", "project": "skysnail", "email": "user@example.com"}
+→ Customer details + subscriptions + invoices + payment methods
+```
+
+### 5. Check Subscription Status
+```json
+{"action": "subscription", "project": "skysnail", "subscription_id": "sub_xxx"}
+→ Full subscription details + upcoming invoice
+```
+
+### 6. Customer Invoice History
+```json
+{"action": "invoices", "project": "skysnail", "customer_id": "cus_xxx", "status": "paid"}
+→ All paid invoices for customer
+```
+
+### 7. Raw API Access
+```json
+{"action": "raw", "project": "skysnail", "endpoint": "charges", "params": {"limit": "5"}}
+→ Raw Stripe API response for any endpoint
 ```
 
 ## 🧪 Test Cases (Verified)

@@ -287,6 +287,19 @@ Each tool page (`/link-detail/{tool-slug}/`) includes:
 
 ## Adding New AI Tools
 
+### Category-Specific Rules (From René)
+
+**For Games Category:**
+- Must be browser-based web apps (no downloads required)
+- Verify games work directly in browser before adding
+- Examples: CrazyGames, Addicting Games, Armor Games, Kongregate, Poki, Miniclip, Y8, Newgrounds, itch.io, Cool Math Games, Agar.io, Slither.io, Paper.io, 2048, Tetris, GeoGuessr, Little Alchemy 2, Shell Shockers, Krunker.io
+- Remove any games that require downloads (Steam, Epic, etc.)
+
+**For Ebooks/Audiobooks Category:**
+- Must offer free content (not just paid)
+- Include mix of ebooks and audiobooks
+- Verify content is legally available
+
 ### Workflow for Creating New Tool Entries
 
 **Important Rules:**
@@ -294,6 +307,50 @@ Each tool page (`/link-detail/{tool-slug}/`) includes:
 - Never use em dashes (—) in descriptions
 - Add paragraph spacing after every 2-3 sentences
 - Always include a screenshot of the tool website
+- **USE BATCH/PARALLEL APPROACH** for multiple tools (see below)
+
+### Batch Approach for Multiple Tools (CRITICAL)
+
+When adding 3+ tools, use this optimized workflow:
+
+**Step 1: Create all JSON files first (parallel writing)**
+```bash
+# Create all JSON files before any API calls
+# Write descriptions in batch mode without submitting
+```
+
+**Step 2: Submit all products in parallel**
+```bash
+# Submit all products simultaneously using background processes
+curl ... -d @tool1.json &
+curl ... -d @tool2.json &
+curl ... -d @tool3.json &
+wait
+```
+
+**Step 3: Get all screenshots in parallel**
+```bash
+# Fetch all screenshots simultaneously
+curl microlink1 &
+curl microlink2 &
+curl microlink3 &
+wait
+```
+
+**Step 4: Upload all images in batch**
+```bash
+# Upload all images and attach to products
+for id in ID1 ID2 ID3; do
+  upload &
+done
+wait
+```
+
+**Why batch approach:**
+- **10x faster** than sequential processing
+- Parallel API calls, screenshots, and uploads
+- 9 tools in ~20 minutes vs 8+ hours sequentially
+- Only notify user AFTER all screenshots are attached
 
 1. **Check if tool already exists:**
    ```bash
@@ -320,17 +377,20 @@ Each tool page (`/link-detail/{tool-slug}/`) includes:
      }'
    ```
 
-3. **Upload image:**
+3. **Get screenshot via Microlink API:**
    ```bash
-   # Create placeholder if no logo available
-   convert -size 800x600 xc:'#HEXCOLOR' /tmp/toolname.png
+   # Get actual website screenshot (NEVER use placeholders)
+   screenshot_url=$(curl -s "https://api.microlink.io/?url=https://toolwebsite.com/&screenshot=true&meta=false" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('data',{}).get('screenshot',{}).get('url',''))")
+   
+   # Download screenshot
+   curl -s -o "/tmp/toolname.png" "$screenshot_url"
    
    # Upload to WordPress
    curl -s -X POST -u "Zapierik:$AITRENDZ_WP_APP_PASS" \
      "https://aitrendz.xyz/wp-json/wp/v2/media" \
-     -F "file=@/tmp/toolname.png;filename=toolname.png" \
-     -F "title=ToolName" \
-     -F "alt_text=ToolName AI Tool"
+     -H "Content-Disposition: attachment; filename=toolname.png" \
+     -H "Content-Type: image/png" \
+     --data-binary @/tmp/toolname.png
    ```
 
 4. **Attach image to product:**
@@ -341,21 +401,32 @@ Each tool page (`/link-detail/{tool-slug}/`) includes:
      -d '{"images": [{"id": MEDIA_ID}]}'
    ```
 
-### SEO/AEO Guidelines for Tool Descriptions
+### SEO/AEO Guidelines for Tool Descriptions (From René)
 
-- **Description:** 150-300 words, include key features, use cases, pricing info
-- **Short description:** 1-2 sentences for listings
+- **Long description:** 800-1500 characters (not words) for optimal SEO
+- **Each sentence must bring new information** - no duplicate content or filler
+- **No artificial word count inflation** - every sentence must be relevant and informative
+- **Focus on SEO-optimized text** so page links can be easily discovered in search and AI engines
+- **Short description:** 1 sentence maximum
 - **Categories:** Only 1 category (most specific one)
 - **Tags:** 3-5 relevant keywords
 - **External URL:** Direct link to tool website
-- **Image:** Screenshot of tool website (not placeholder)
+- **Image:** Screenshot of actual website via Microlink API - never placeholders
+- **Content structure:** What the platform is, key features, popular examples, unique value proposition, user experience, technical details
 
-### Formatting Rules
+### Formatting Rules (CRITICAL - From René)
 
-- **NO em dashes** (—) anywhere in content
+- **NO em dashes** (—) anywhere in content - use hyphens (-) instead
 - **Paragraph spacing** after every 2-3 sentences for readability
-- **Only 1 category** per tool
-- **Always include screenshot** of actual tool website
+- **Only 1 category** per tool (plus parent "Free Entertainment" if applicable)
+- **Always include screenshot** of actual website via Microlink API - never use placeholders or colored images
+- **English only** - all content must be in English
+- **No technical details** when speaking to René (executive/marketing focus)
+- **Never create new categories** unless explicitly asked by user
+- **Short description:** 1 sentence maximum
+- **External URL:** Use direct link to tool website (no redirects)
+- **Yoast SEO:** Must populate "Focus keyphrase" with exact tool name
+- **Language requirement:** English-only websites for AITrendz entries
 
 ### Example: Base44 (Created 2026-03-30)
 
@@ -363,6 +434,36 @@ Each tool page (`/link-detail/{tool-slug}/`) includes:
 **Tags:** No-Code, App Builder, AI Development, Full-Stack, MVP  
 **URL:** https://aitrendz.xyz/link-detail/base44/  
 **Product ID:** 49557
+
+## René's Rules Summary (CRITICAL)
+
+When working with AITrendz content, follow these rules established by René:
+
+### Content Rules
+1. **English only** - All content must be in English
+2. **No technical details** when speaking to René (executive/marketing focus)
+3. **Never create new categories** unless explicitly asked
+
+### Formatting Rules
+4. **NO em dashes** (—) - use hyphens (-) instead
+5. **Paragraph spacing** after every 2-3 sentences
+6. **Only 1 category** per tool (plus parent if applicable)
+7. **Short description:** 1 sentence maximum
+
+### SEO Rules
+8. **Long description:** 800-1500 characters (not words)
+9. **Each sentence brings new information** - no duplicates
+10. **No artificial word count inflation** - relevant info only
+11. **Focus on SEO-optimized text** for search and AI discovery
+12. **Yoast SEO:** Focus keyphrase = exact tool name
+
+### Image Rules
+13. **Screenshot mandatory** - use Microlink API for actual website screenshots
+14. **Never use placeholders** or colored images
+15. **English-only websites** for AITrendz entries
+
+### URL Rules
+16. **External URL:** Direct link to tool website (no redirects)
 
 ## Related Projects
 

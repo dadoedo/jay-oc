@@ -1,6 +1,6 @@
 ---
 name: foodient
-description: Foodient - AI-powered food detection mobile app for allergen and sensitivity tracking
+description: Foodient - AI-powered food detection mobile app for allergen and sensitivity tracking. Use stripe_analytics skill with project="foodient" to view Stripe revenue data, MRR, churn, and top customers.
 ---
 
 # Foodient
@@ -197,8 +197,49 @@ psql "$FOODIENT_DB_URL" -c "SELECT status, COUNT(*) FROM user_subscriptions GROU
 | **Brevo** | Transactional email, marketing |
 | **Apple App Store** | iOS subscriptions, Sign-In |
 | **Google Play** | Android subscriptions |
+| **Stripe** | Web subscriptions and billing |
 
 AI provider is configured via `AI_PROVIDER` env variable; factory pattern in `aiAnalyzerService.js`.
+
+---
+
+## Stripe Analytics
+
+Use the `stripe_analytics` skill to view revenue data and debug customer issues for Foodient:
+
+### Dashboard & Analytics
+```bash
+/stripe-metrics foodient                    # Default dashboard (30 days)
+/stripe-metrics foodient --churn            # Churn analysis
+```
+
+### Debug Specific Customer
+```bash
+# Lookup by customer ID
+{"action": "customer", "project": "foodient", "customer_id": "cus_xxx"}
+
+# Lookup by email
+{"action": "customer", "project": "foodient", "email": "user@example.com"}
+
+# Check subscription status
+{"action": "subscription", "project": "foodient", "subscription_id": "sub_xxx"}
+
+# View customer invoices
+{"action": "invoices", "project": "foodient", "customer_id": "cus_xxx"}
+
+# Raw Stripe API access
+{"action": "raw", "project": "foodient", "endpoint": "payment_intents", "params": {"customer": "cus_xxx"}}
+```
+
+### Available Actions
+- `analytics` - Dashboard with MRR, churn, segments (default)
+- `customer` - Full customer details + subscriptions + invoices + payment methods
+- `subscription` - Subscription details + upcoming invoice
+- `invoices` - Customer invoice history
+- `events` - Stripe events for customer
+- `raw` - Direct API access to any Stripe endpoint
+
+Requires: `STRIPE_FOODIENT_READ_KEY` environment variable (read-only key).
 
 ---
 

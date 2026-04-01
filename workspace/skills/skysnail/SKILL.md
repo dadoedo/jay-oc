@@ -1,6 +1,6 @@
 ---
 name: skysnail
-description: SkySnail (Thumbgen) - AI-powered YouTube thumbnail generator at skysnail.io
+description: SkySnail (Thumbgen) - AI-powered YouTube thumbnail generator at skysnail.io. Use stripe_analytics skill with project="skysnail" to view Stripe revenue data, MRR, churn, and top customers.
 ---
 
 # SkySnail (Thumbgen)
@@ -165,6 +165,44 @@ psql "$SKYSNAIL_DB_URL" -c "SELECT id, user_id, title, created_at FROM thumbnail
 - `POST /api/billing/checkout` - Create Stripe checkout session
 - `POST /api/billing/webhook` - Stripe webhook handler
 - `GET /api/billing/portal` - Stripe customer portal URL
+
+## Stripe Analytics
+
+Use the `stripe_analytics` skill to view revenue data and debug customer issues for SkySnail:
+
+### Dashboard & Analytics
+```bash
+/stripe-metrics skysnail                    # Default dashboard (30 days)
+/stripe-metrics skysnail --churn            # Churn analysis
+```
+
+### Debug Specific Customer
+```bash
+# Lookup by customer ID
+{"action": "customer", "project": "skysnail", "customer_id": "cus_xxx"}
+
+# Lookup by email
+{"action": "customer", "project": "skysnail", "email": "user@example.com"}
+
+# Check subscription status
+{"action": "subscription", "project": "skysnail", "subscription_id": "sub_xxx"}
+
+# View customer invoices
+{"action": "invoices", "project": "skysnail", "customer_id": "cus_xxx"}
+
+# Raw Stripe API access
+{"action": "raw", "project": "skysnail", "endpoint": "payment_intents", "params": {"customer": "cus_xxx"}}
+```
+
+### Available Actions
+- `analytics` - Dashboard with MRR, churn, segments (default)
+- `customer` - Full customer details + subscriptions + invoices + payment methods
+- `subscription` - Subscription details + upcoming invoice
+- `invoices` - Customer invoice history
+- `events` - Stripe events for customer
+- `raw` - Direct API access to any Stripe endpoint
+
+Requires: `STRIPE_SKYSNAIL_READ_KEY` environment variable (read-only key).
 
 ### Avatars
 - `GET /api/avatar` - List user avatars

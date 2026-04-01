@@ -69,7 +69,37 @@ async function main() {
   }
 
   try {
-    const result = await runAnalytics(apiKeyResult.key, input, apiKeyResult.project);
+    const action = input.action || 'analytics';
+    let result;
+    
+    switch (action) {
+      case 'analytics':
+        result = await runAnalytics(apiKeyResult.key, input, apiKeyResult.project);
+        break;
+      case 'customer':
+        result = await getCustomer(apiKeyResult.key, input, apiKeyResult.project);
+        break;
+      case 'subscription':
+        result = await getSubscription(apiKeyResult.key, input, apiKeyResult.project);
+        break;
+      case 'invoices':
+        result = await getCustomerInvoices(apiKeyResult.key, input, apiKeyResult.project);
+        break;
+      case 'events':
+        result = await getCustomerEvents(apiKeyResult.key, input, apiKeyResult.project);
+        break;
+      case 'raw':
+        result = await rawApiCall(apiKeyResult.key, input, apiKeyResult.project);
+        break;
+      default:
+        result = {
+          status: 'error',
+          error_type: 'invalid_action',
+          message: `Unknown action: ${action}. Supported: analytics, customer, subscription, invoices, events, raw`,
+          supported_actions: ['analytics', 'customer', 'subscription', 'invoices', 'events', 'raw']
+        };
+    }
+    
     console.log(JSON.stringify(result));
   } catch (error) {
     console.log(JSON.stringify({
@@ -432,6 +462,427 @@ function generateActionItems(churn, segments) {
   }
   
   return actions;
+}
+
+// Get specific customer details
+async function getCustomer(apiKey, input, projectName) {
+  const startTime = Date.now();
+  
+  if (!input.customer_id && !input.email) {
+    return {
+      status: 'error',
+      error_type: 'missing_parameter',
+      message: 'Required: customer_id (cus_xxx) or email'
+    };
+  }
+  
+  let customer;
+  
+  if (input.customer_id) {
+    // Fetch by ID
+    const response = await fetch(`${STRIPE_API}/customers/${input.customer_id}`, {
+      headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      signal: AbortSignal.timeout(TIMEOUT)
+    });
+    
+    if (!response.ok) {
+      return {
+        status: 'error',
+        error_type: 'not_found',
+        message: `Customer not found: ${input.customer_id}`
+      };
+    }
+    
+    customer = await response.json();
+  } else {
+    // Search by email using list with email filter
+    const params = new URLSearchParams({ email: input.email, limit: '5' });
+    const response = await fetch(`${STRIPE_API}/customers?${params}`, {
+      headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      signal: AbortSignal.timeout(TIMEOUT)
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Search failed: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    if (!data.data || data.data.length === 0) {
+      return {
+        status: 'error',
+        error_type: 'not_found',
+        message: `No customer found with email: ${input.email}`
+      };
+    }
+    
+    customer = data.data[0];
+  }
+  
+  // Fetch related data in parallel
+  const [subscriptions, invoices, paymentMethods] = await Promise.all([
+    fetchStripeList(apiKey, `customers/${customer.id}/subscriptions`, 10),
+    fetchStripeList(apiKey, `customers/${customer.id}/invoices`, 10),
+    fetchStripeList(apiKey, `customers/${customer.id}/payment_methods`, 5)
+  ]);
+  
+  const executionTime = Date.now() - startTime;
+  
+  return {
+    status: 'success',
+    action: 'customer',
+    project: projectName,
+    data: {
+      customer: {
+        id: customer.id,
+        email: customer.email,
+        name: customer.name,
+        description: customer.description,
+        phone: customer.phone,
+        address: customer.address,
+        balance: customer.balance,
+        currency: customer.currency,
+        created: new Date(customer.created * 1000).toISOString(),
+        metadata: customer.metadata
+      },
+      subscriptions: subscriptions.map(s => ({
+        id: s.id,
+        status: s.status,
+        plan: s.items?.data?.[0]?.price?.nickname || 'Unknown',
+        amount: s.items?.data?.[0]?.price?.unit_amount,
+        currency: s.currency,
+        current_period_start: s.current_period_start ? new Date(s.current_period_start * 1000).toISOString() : null,
+        current_period_end: s.current_period_end ? new Date(s.current_period_end * 1000).toISOString() : null,
+        cancel_at_period_end: s.cancel_at_period_end,
+        canceled_at: s.canceled_at ? new Date(s.canceled_at * 1000).toISOString() : null,
+        trial_start: s.trial_start ? new Date(s.trial_start * 1000).toISOString() : null,
+        trial_end: s.trial_end ? new Date(s.trial_end * 1000).toISOString() : null
+      })),
+      invoices: invoices.map(i => ({
+        id: i.id,
+        status: i.status,
+        amount_due: i.amount_due,
+        amount_paid: i.amount_paid,
+        currency: i.currency,
+        created: i.created ? new Date(i.created * 1000).toISOString() : null,
+        period_start: i.period_start ? new Date(i.period_start * 1000).toISOString() : null,
+        period_end: i.period_end ? new Date(i.period_end * 1000).toISOString() : null,
+        pdf_url: i.invoice_pdf,
+        hosted_invoice_url: i.hosted_invoice_url
+      })),
+      payment_methods: paymentMethods.map(pm => ({
+        id: pm.id,
+        type: pm.type,
+        card: pm.card ? {
+          brand: pm.card.brand,
+          last4: pm.card.last4,
+          exp_month: pm.card.exp_month,
+          exp_year: pm.card.exp_year
+        } : null
+      }))
+    },
+    metadata: {
+      execution_time_ms: executionTime,
+      api_calls: 4
+    }
+  };
+}
+
+// Get specific subscription details
+async function getSubscription(apiKey, input, projectName) {
+  const startTime = Date.now();
+  
+  if (!input.subscription_id) {
+    return {
+      status: 'error',
+      error_type: 'missing_parameter',
+      message: 'Required: subscription_id (sub_xxx)'
+    };
+  }
+  
+  const response = await fetch(`${STRIPE_API}/subscriptions/${input.subscription_id}`, {
+    headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+    signal: AbortSignal.timeout(TIMEOUT)
+  });
+  
+  if (!response.ok) {
+    return {
+      status: 'error',
+      error_type: 'not_found',
+      message: `Subscription not found: ${input.subscription_id}`
+    };
+  }
+  
+  const subscription = await response.json();
+  
+  // Get upcoming invoice if active
+  let upcomingInvoice = null;
+  if (subscription.status === 'active') {
+    try {
+      const uiResponse = await fetch(`${STRIPE_API}/invoices/upcoming?customer=${subscription.customer}&subscription=${subscription.id}`, {
+        headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+        signal: AbortSignal.timeout(TIMEOUT)
+      });
+      if (uiResponse.ok) {
+        upcomingInvoice = await uiResponse.json();
+      }
+    } catch (e) {
+      // Ignore errors for upcoming invoice
+    }
+  }
+  
+  const executionTime = Date.now() - startTime;
+  
+  return {
+    status: 'success',
+    action: 'subscription',
+    project: projectName,
+    data: {
+      subscription: {
+        id: subscription.id,
+        status: subscription.status,
+        customer: subscription.customer,
+        items: subscription.items?.data?.map(item => ({
+          id: item.id,
+          price: {
+            id: item.price?.id,
+            nickname: item.price?.nickname,
+            unit_amount: item.price?.unit_amount,
+            currency: item.price?.currency,
+            recurring: item.price?.recurring
+          },
+          quantity: item.quantity
+        })),
+        current_period_start: subscription.current_period_start ? new Date(subscription.current_period_start * 1000).toISOString() : null,
+        current_period_end: subscription.current_period_end ? new Date(subscription.current_period_end * 1000).toISOString() : null,
+        cancel_at_period_end: subscription.cancel_at_period_end,
+        canceled_at: subscription.canceled_at ? new Date(subscription.canceled_at * 1000).toISOString() : null,
+        trial_start: subscription.trial_start ? new Date(subscription.trial_start * 1000).toISOString() : null,
+        trial_end: subscription.trial_end ? new Date(subscription.trial_end * 1000).toISOString() : null,
+        ended_at: subscription.ended_at ? new Date(subscription.ended_at * 1000).toISOString() : null,
+        collection_method: subscription.collection_method,
+        days_until_due: subscription.days_until_due,
+        default_payment_method: subscription.default_payment_method,
+        latest_invoice: subscription.latest_invoice,
+        metadata: subscription.metadata
+      },
+      upcoming_invoice: upcomingInvoice ? {
+        amount_due: upcomingInvoice.amount_due,
+        currency: upcomingInvoice.currency,
+        period_start: upcomingInvoice.period_start ? new Date(upcomingInvoice.period_start * 1000).toISOString() : null,
+        period_end: upcomingInvoice.period_end ? new Date(upcomingInvoice.period_end * 1000).toISOString() : null,
+        next_payment_attempt: upcomingInvoice.next_payment_attempt ? new Date(upcomingInvoice.next_payment_attempt * 1000).toISOString() : null
+      } : null
+    },
+    metadata: {
+      execution_time_ms: executionTime,
+      api_calls: upcomingInvoice ? 2 : 1
+    }
+  };
+}
+
+// Get customer invoices
+async function getCustomerInvoices(apiKey, input, projectName) {
+  const startTime = Date.now();
+  
+  if (!input.customer_id) {
+    return {
+      status: 'error',
+      error_type: 'missing_parameter',
+      message: 'Required: customer_id (cus_xxx)'
+    };
+  }
+  
+  const limit = Math.min(input.limit || 20, 100);
+  const status = input.status; // draft, open, paid, uncollectible, void
+  
+  let url = `${STRIPE_API}/invoices?customer=${input.customer_id}&limit=${limit}`;
+  if (status) url += `&status=${status}`;
+  
+  const response = await fetch(url, {
+    headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+    signal: AbortSignal.timeout(TIMEOUT)
+  });
+  
+  if (!response.ok) {
+    throw new Error(`API error: ${response.status}`);
+  }
+  
+  const data = await response.json();
+  
+  const executionTime = Date.now() - startTime;
+  
+  return {
+    status: 'success',
+    action: 'invoices',
+    project: projectName,
+    data: {
+      customer_id: input.customer_id,
+      count: data.data.length,
+      has_more: data.has_more,
+      invoices: data.data.map(i => ({
+        id: i.id,
+        status: i.status,
+        number: i.number,
+        amount_due: i.amount_due,
+        amount_paid: i.amount_paid,
+        amount_remaining: i.amount_remaining,
+        currency: i.currency,
+        created: new Date(i.created * 1000).toISOString(),
+        due_date: i.due_date ? new Date(i.due_date * 1000).toISOString() : null,
+        period_start: new Date(i.period_start * 1000).toISOString(),
+        period_end: new Date(i.period_end * 1000).toISOString(),
+        pdf_url: i.invoice_pdf,
+        hosted_invoice_url: i.hosted_invoice_url,
+        subscription: i.subscription,
+        description: i.description,
+        metadata: i.metadata
+      }))
+    },
+    metadata: {
+      execution_time_ms: executionTime,
+      api_calls: 1
+    }
+  };
+}
+
+// Get customer events
+async function getCustomerEvents(apiKey, input, projectName) {
+  const startTime = Date.now();
+  
+  if (!input.customer_id) {
+    return {
+      status: 'error',
+      error_type: 'missing_parameter',
+      message: 'Required: customer_id (cus_xxx)'
+    };
+  }
+  
+  const limit = Math.min(input.limit || 20, 100);
+  const type = input.type; // Optional: filter by event type
+  
+  let url = `${STRIPE_API}/events?limit=${limit}`;
+  
+  const response = await fetch(url, {
+    headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+    signal: AbortSignal.timeout(TIMEOUT)
+  });
+  
+  if (!response.ok) {
+    throw new Error(`API error: ${response.status}`);
+  }
+  
+  const data = await response.json();
+  
+  // Filter events related to this customer
+  const customerEvents = data.data.filter(event => {
+    const obj = event.data?.object;
+    return obj?.customer === input.customer_id || 
+           obj?.id === input.customer_id ||
+           JSON.stringify(event).includes(input.customer_id);
+  });
+  
+  const executionTime = Date.now() - startTime;
+  
+  return {
+    status: 'success',
+    action: 'events',
+    project: projectName,
+    data: {
+      customer_id: input.customer_id,
+      count: customerEvents.length,
+      events: customerEvents.map(e => ({
+        id: e.id,
+        type: e.type,
+        created: new Date(e.created * 1000).toISOString(),
+        api_version: e.api_version,
+        data: e.data
+      }))
+    },
+    metadata: {
+      execution_time_ms: executionTime,
+      api_calls: 1,
+      total_events_checked: data.data.length
+    }
+  };
+}
+
+// Raw API call for any Stripe endpoint
+async function rawApiCall(apiKey, input, projectName) {
+  const startTime = Date.now();
+  
+  if (!input.endpoint) {
+    return {
+      status: 'error',
+      error_type: 'missing_parameter',
+      message: 'Required: endpoint (e.g., "customers", "charges/ch_xxx", "subscriptions")'
+    };
+  }
+  
+  // Build URL with query params
+  let url = `${STRIPE_API}/${input.endpoint}`;
+  if (input.params) {
+    const params = new URLSearchParams(input.params);
+    url += `?${params}`;
+  }
+  
+  const method = input.method || 'GET';
+  const body = input.body ? JSON.stringify(input.body) : undefined;
+  
+  const response = await fetch(url, {
+    method,
+    headers: { 
+      'Authorization': `Bearer ${apiKey}`, 
+      'Content-Type': 'application/json'
+    },
+    body,
+    signal: AbortSignal.timeout(TIMEOUT)
+  });
+  
+  if (!response.ok) {
+    const errorText = await response.text();
+    return {
+      status: 'error',
+      error_type: 'api_error',
+      message: `Stripe API error: ${response.status}`,
+      details: errorText
+    };
+  }
+  
+  const data = await response.json();
+  
+  const executionTime = Date.now() - startTime;
+  
+  return {
+    status: 'success',
+    action: 'raw',
+    project: projectName,
+    data: {
+      endpoint: input.endpoint,
+      method,
+      response: data
+    },
+    metadata: {
+      execution_time_ms: executionTime,
+      api_calls: 1
+    }
+  };
+}
+
+// Helper to fetch a list from Stripe
+async function fetchStripeList(apiKey, endpoint, limit = 10) {
+  const url = `${STRIPE_API}/${endpoint}?limit=${limit}`;
+  
+  const response = await fetch(url, {
+    headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+    signal: AbortSignal.timeout(TIMEOUT)
+  });
+  
+  if (!response.ok) {
+    return [];
+  }
+  
+  const data = await response.json();
+  return data.data || [];
 }
 
 main();

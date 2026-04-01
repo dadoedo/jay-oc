@@ -1,6 +1,6 @@
 ---
 name: viralsky
-description: ViralSky - AI-powered social media content generator at viralsky.io
+description: ViralSky - AI-powered social media content generator at viralsky.io. Use stripe_analytics skill with project="viralsky" to view Stripe revenue data, MRR, churn, and top customers.
 ---
 
 # ViralSky
@@ -218,6 +218,44 @@ Auth, account, Stripe (checkout/webhook/portal), subscription, credits, generati
 - **Flow:** `/api/stripe/checkout` → Stripe Checkout → `/subscription/success`; `/api/stripe/portal` for management
 - **Webhook:** `/api/stripe/webhook` handles subscription events, updates `Subscription` table
 - **Price IDs from env:** `STRIPE_PRO_MONTHLY_PRICE_ID`, `STRIPE_PRO_ANNUAL_PRICE_ID`, `STRIPE_ULTRA_MONTHLY_PRICE_ID`, `STRIPE_ULTRA_ANNUAL_PRICE_ID`, `STRIPE_MAX_MONTHLY_PRICE_ID`, `STRIPE_MAX_ANNUAL_PRICE_ID`
+
+## Stripe Analytics
+
+Use the `stripe_analytics` skill to view revenue data and debug customer issues for ViralSky:
+
+### Dashboard & Analytics
+```bash
+/stripe-metrics viralsky                    # Default dashboard (30 days)
+/stripe-metrics viralsky --churn            # Churn analysis
+```
+
+### Debug Specific Customer
+```bash
+# Lookup by customer ID
+{"action": "customer", "project": "viralsky", "customer_id": "cus_xxx"}
+
+# Lookup by email
+{"action": "customer", "project": "viralsky", "email": "user@example.com"}
+
+# Check subscription status
+{"action": "subscription", "project": "viralsky", "subscription_id": "sub_xxx"}
+
+# View customer invoices
+{"action": "invoices", "project": "viralsky", "customer_id": "cus_xxx"}
+
+# Raw Stripe API access
+{"action": "raw", "project": "viralsky", "endpoint": "payment_intents", "params": {"customer": "cus_xxx"}}
+```
+
+### Available Actions
+- `analytics` - Dashboard with MRR, churn, segments (default)
+- `customer` - Full customer details + subscriptions + invoices + payment methods
+- `subscription` - Subscription details + upcoming invoice
+- `invoices` - Customer invoice history
+- `events` - Stripe events for customer
+- `raw` - Direct API access to any Stripe endpoint
+
+Requires: `STRIPE_VIRALSKY_READ_KEY` environment variable (read-only key).
 
 ## AI Provider Chain
 

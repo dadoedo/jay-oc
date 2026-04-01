@@ -1,6 +1,6 @@
 ---
 name: anderro
-description: Anderro - SaaS affiliate/partner platform (anderro.com)
+description: Anderro - SaaS affiliate/partner platform (anderro.com). Use stripe_analytics skill with project="anderro" to view Stripe revenue data, MRR, churn, and top customers.
 ---
 
 # Anderro
@@ -189,6 +189,44 @@ NextAuth, Stripe Connect/callback/webhooks, billing checkout/webhook/portal, cro
 - **Stripe Connect:** Affiliate payouts via transfers
 - **Stripe Billing:** Business subscriptions (Starter/Pro/Max plans + LTD tiers)
 - **Resend:** Transactional and lifecycle emails
+
+## Stripe Analytics
+
+Use the `stripe_analytics` skill to view revenue data and debug customer issues for Anderro:
+
+### Dashboard & Analytics
+```bash
+/stripe-metrics anderro                    # Default dashboard (30 days)
+/stripe-metrics anderro --churn            # Churn analysis
+```
+
+### Debug Specific Customer
+```bash
+# Lookup by customer ID
+{"action": "customer", "project": "anderro", "customer_id": "cus_xxx"}
+
+# Lookup by email
+{"action": "customer", "project": "anderro", "email": "user@example.com"}
+
+# Check subscription status
+{"action": "subscription", "project": "anderro", "subscription_id": "sub_xxx"}
+
+# View customer invoices
+{"action": "invoices", "project": "anderro", "customer_id": "cus_xxx"}
+
+# Raw Stripe API access
+{"action": "raw", "project": "anderro", "endpoint": "payment_intents", "params": {"customer": "cus_xxx"}}
+```
+
+### Available Actions
+- `analytics` - Dashboard with MRR, churn, segments (default)
+- `customer` - Full customer details + subscriptions + invoices + payment methods
+- `subscription` - Subscription details + upcoming invoice
+- `invoices` - Customer invoice history
+- `events` - Stripe events for customer
+- `raw` - Direct API access to any Stripe endpoint
+
+Requires: `STRIPE_ANDERRO_READ_KEY` environment variable (read-only key).
 - **SamCart:** Webhook integration per SaaS product
 - **WordPress:** Plugin for tracking integration
 - **PostHog:** Product analytics (build-time keys)
