@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # Deploy Jay workspace files to production
-# Usage: ./deploy.sh [--restart] [--dry-run]
+# Usage: ./deploy.sh [--restart] [--dry-run] [--force] [--no-pull]
 
 SERVER="hetzner-prod"
 REMOTE_WORKSPACE="/opt/openclaw-jay/data/.openclaw/workspace"
@@ -11,22 +11,38 @@ LOCAL_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 RESTART=false
 DRY_RUN=false
+FORCE=false
+NO_PULL=false
 
 for arg in "$@"; do
   case $arg in
     --restart) RESTART=true ;;
     --dry-run) DRY_RUN=true ;;
+    --force) FORCE=true ;;
+    --no-pull) NO_PULL=true ;;
     --help|-h)
-      echo "Usage: $0 [--restart] [--dry-run]"
+      echo "Usage: $0 [--restart] [--dry-run] [--force] [--no-pull]"
       echo ""
       echo "Syncs workspace, docker-compose.override.yml, and applies reasoning visibility patch on server."
       echo ""
       echo "  --restart   Restart the gateway after deploy"
-      echo "  --dry-run   Show what would be synced without doing it"
+      echo "  --dry-run   Show what would be synced without doing it (skips pull from production)"
+      echo "  --force     Pass --force to pull.sh (skip local git safety check before pull)"
+      echo "  --no-pull   Do not run pull.sh before deploy (deploy local workspace as-is)"
       exit 0
       ;;
   esac
 done
+
+if ! $DRY_RUN && ! $NO_PULL; then
+  echo "--- Pull from production (before deploy) ---"
+  pull_args=()
+  if $FORCE; then
+    pull_args+=(--force)
+  fi
+  "$LOCAL_DIR/pull.sh" "${pull_args[@]}"
+  echo ""
+fi
 
 RSYNC_FLAGS="-avz --checksum"
 if $DRY_RUN; then
